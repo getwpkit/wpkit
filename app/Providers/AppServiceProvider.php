@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Spatie\Valuestore\Valuestore;
 use function Termwind\render;
 use Illuminate\Support\Facades\Storage;
 
@@ -31,6 +32,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(
+            Valuestore::class,
+            fn() => Valuestore::make(Storage::path('config.json'))
+        );
     }
 }
