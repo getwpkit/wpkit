@@ -5,6 +5,7 @@ namespace App\Commands;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Storage;
 use LaravelZero\Framework\Commands\Command;
+use function Laravel\Prompts\text;
 use function Termwind\render;
 use function Laravel\Prompts\form;
 
@@ -49,17 +50,25 @@ class SetupCommand extends Command
             ->password('Enter DB server password', required: true, name: 'dbpass')
             ->text('Enter DB prefix', default: 'wp_', name: 'prefix')
             ->select(
-                label: 'Choose site url generator based on your dev environment',
+                label: 'Choose site url generator',
                 options: [
-                    'localhost' => 'http://localhost',
-                    'valet' => 'Laravel Valet -> http://{siteurl}.test',
-                    'localwp' => 'LocalWP -> http://{siteurl}.local',
-                    'wp-cli' => 'wp-cli Server in port 8080 -> http://localhost:8080',
+                    'static' => 'Static',
+                    'dynamic' => 'Dynamic',
                 ],
                 default: 'localhost',
                 required: true,
-                name: 'siteurl'
+                name: 'siteurl-type'
             )
+            ->add(function ($responses) {
+                $siteUrl = $responses['siteurl-type'] === 'static' ? 'http://localhost:8080' : 'http://{siteurl}.local';
+                return text(
+                    'Enter Site URL template',
+                    default: $siteUrl,
+                    required: true,
+                    hint: '{siteurl} replaced with auto generated name'
+                );
+
+            }, name: 'siteurl')
             ->submit();
 
         $this->task(
