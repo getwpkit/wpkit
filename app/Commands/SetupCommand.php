@@ -69,6 +69,8 @@ class SetupCommand extends Command
                 );
 
             }, name: 'siteurl')
+            ->text('Enter default Admin username', default: 'admin', name: 'username',required:true)
+            ->password('Enter default Admin password', name: 'password',required:true)
             ->submit();
 
         $this->task(
