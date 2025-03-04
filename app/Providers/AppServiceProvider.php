@@ -17,7 +17,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(Valuestore $config): void
     {
-        if ($_SERVER['argv'][1] !== 'setup' && !Storage::exists('config.json')) {
+        global $argv, $argc;
+        $subCommand = $argc > 1 ? $argv[1] : '';
+        if ($subCommand !== 'setup' && !Storage::exists('config.json')) {
             render(<<<'HTML'
                 <div class="py-1 ml-2">
                     <div class="px-1 bg-red-300 text-black">WPkit has not been initialized yet.</div>
