@@ -34,13 +34,26 @@ class AppServiceProvider extends ServiceProvider
         DB::purge('default');
         Config::set('database.connections.default.driver', $config->get('db'));
         if (File::exists(getcwd() . '/wp-config.php')) {
-            include getcwd() . '/wp-config.php';
+            $file = getcwd() . '/wp-config.php';
+            $file_contents = file_get_contents($file);
+            // Regex to find constant definitions
+            preg_match_all('/define\s*\(\s*["\']([A-Za-z0-9_]+)["\']\s*,\s*["\']([^"\']+)["\']\s*\)/', $file_contents, $matches);
+            // Define the constants dynamically
+            foreach ($matches[1] as $index => $constantName) {
+                $constantValue = $matches[2][$index];
+                define($constantName, $constantValue);
+            }
+            // Regex pattern to match $table_prefix definition
+            $pattern = "/table_prefix\s*=\s*'(.*?)';/";
+            preg_match($pattern, $file_contents, $matches);
+            $table_prefix = $matches[1];
+
             Config::set('database.connections.default.username', DB_USER);
             Config::set('database.connections.default.password', DB_PASSWORD);
             Config::set('database.connections.default.database', DB_NAME);
             Config::set('database.connections.default.host', DB_HOST);
             Config::set('database.connections.default.charset', DB_CHARSET);
-            Config::set('database.connections.default.collation', DB_COLLATE);
+            Config::set('database.connections.default.collation', defined('DB_COLLATE') ? DB_COLLATE : null);
             Config::set('database.connections.default.prefix', $table_prefix);
         } else {
             Config::set('database.connections.default.username', $config->get('dbuser'));
