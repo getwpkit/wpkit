@@ -69,10 +69,13 @@ class SetupCommand extends Command
                 );
 
             }, name: 'siteurl')
-            ->text('Enter default Admin username', default: 'admin', name: 'username',required:true)
-            ->password('Enter default Admin password', name: 'password',required:true)
+            ->text('Enter default Admin username', default: 'admin', name: 'username', required: true)
+            ->password('Enter default Admin password', name: 'password', required: true)
             ->submit();
 
+        if (!Storage::exists('presets')) {
+            Storage::makeDirectory('presets');
+        }
         $this->task(
             'saving configurations ',
             fn() => Storage::put('config.json', json_encode($config, JSON_PRETTY_PRINT))

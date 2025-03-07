@@ -3,10 +3,14 @@
 namespace App\Commands;
 
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use LaravelZero\Framework\Commands\Command;
 use Spatie\Valuestore\Valuestore;
+use function Laravel\Prompts\select;
 use function Laravel\Prompts\text;
 use function Termwind\render;
 use PDO;
@@ -57,6 +61,13 @@ class NewCommand extends Command
 
         $username = text('Enter Admin username', default: $username, required: true);
         $password = text('Enter Admin password', default: $password, required: true);
+        $presets = array_merge(['None'], Storage::files('presets'));
+
+        $preset = select('Choose preset', $presets);
+
+        if ($preset !== 'None') {
+            require_once Storage::path($preset);
+        }
 
         $cmd = "wp core download --path=\"{$path}\" --locale={$locale} {$skipContent} {$force}";
         $cmdOut = '';
@@ -107,6 +118,23 @@ class NewCommand extends Command
             return !Str::contains($cmdOut, 'error', true);
         });
         $this->checkIfErrorOccurs($task, $cmdOut);
+        $this->restartDatabase($path);
+
+        $task = $this->task("Run wpkit_preset_do", function () use ($path) {
+            if (function_exists(function: 'wpkit_preset_do')) {
+                $wpkitFunction = new \ReflectionFunction('wpkit_preset_do');
+                $db = DB::connection();
+                $path = $path . DIRECTORY_SEPARATOR;
+                $wpkitArgNames = array_column($wpkitFunction->getParameters(), 'name');
+                $wpkitArgs = [];
+                foreach ($wpkitArgNames as $paramName) {
+                    if (in_array($paramName, ['path', 'db']))
+                        $wpkitArgs[$paramName] = $$paramName;
+                }
+                $wpkitFunction->invokeArgs($wpkitArgs);
+            }
+            return true;
+        });
 
 
 
@@ -146,6 +174,35 @@ class NewCommand extends Command
             $message = Str::replace(['.', '\n'], '', $message);
             $this->fail($message);
             exit(1);
+        }
+    }
+
+    private function restartDatabase($path)
+    {
+        if (File::exists($path . '/wp-config.php')) {
+            DB::purge('default');
+            $file = $path . '/wp-config.php';
+            $file_contents = file_get_contents($file);
+            // Regex to find constant definitions
+            preg_match_all('/define\s*\(\s*["\']([A-Za-z0-9_]+)["\']\s*,\s*["\']([^"\']+)["\']\s*\)/', $file_contents, $matches);
+            // Define the constants dynamically
+            foreach ($matches[1] as $index => $constantName) {
+                $constantValue = $matches[2][$index];
+                define($constantName, $constantValue);
+            }
+            // Regex pattern to match $table_prefix definition
+            $pattern = "/table_prefix\s*=\s*'(.*?)';/";
+            preg_match($pattern, $file_contents, $matches);
+            $table_prefix = $matches[1];
+
+            Config::set('database.connections.default.username', DB_USER);
+            Config::set('database.connections.default.password', DB_PASSWORD);
+            Config::set('database.connections.default.database', DB_NAME);
+            Config::set('database.connections.default.host', DB_HOST);
+            Config::set('database.connections.default.charset', DB_CHARSET);
+            Config::set('database.connections.default.collation', defined('DB_COLLATE') ? DB_COLLATE : null);
+            Config::set('database.connections.default.prefix', $table_prefix);
+            DB::reconnect('default');
         }
     }
 }
