@@ -60,6 +60,13 @@ class AppServiceProvider extends ServiceProvider
             Config::set('database.connections.default.password', $config->get('dbpass'));
         }
         DB::reconnect('default');
+
+        Config::set('laravel-console-dusk.paths', [
+            'screenshots' => Storage::path('browser/screenshots'),
+            'log' => Storage::path('browser/log'),
+            'source' => Storage::path('browser/source'),
+        ]);
+
     }
 
     /**
