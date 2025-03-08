@@ -120,23 +120,22 @@ class NewCommand extends Command
         $this->checkIfErrorOccurs($task, $cmdOut);
         $this->restartDatabase($path);
 
-        $task = $this->task("Run wpkit_preset_do", function () use ($path) {
+        $task = $this->task("Run wpkit_preset_do", function () use ($path, $siteUrl) {
             if (function_exists(function: 'wpkit_preset_do')) {
                 $wpkitFunction = new \ReflectionFunction('wpkit_preset_do');
                 $db = DB::connection();
                 $path = $path . DIRECTORY_SEPARATOR;
+                $obj = $this;
                 $wpkitArgNames = array_column($wpkitFunction->getParameters(), 'name');
                 $wpkitArgs = [];
                 foreach ($wpkitArgNames as $paramName) {
-                    if (in_array($paramName, ['path', 'db']))
+                    if (in_array($paramName, ['path', 'db', 'obj', 'siteUrl']))
                         $wpkitArgs[$paramName] = $$paramName;
                 }
                 $wpkitFunction->invokeArgs($wpkitArgs);
             }
             return true;
         });
-
-
 
         // Success at the end
         if ($task && Str::contains($cmdOut, 'success', true)) {
