@@ -92,7 +92,8 @@ class EraseCommand extends Command
             // Define the constants dynamically
             foreach ($matches[1] as $index => $constantName) {
                 $constantValue = $matches[2][$index];
-                define($constantName, $constantValue);
+                if (!defined($constantName))
+                    define($constantName, $constantValue);
             }
             // Regex pattern to match $table_prefix definition
             $pattern = "/table_prefix\s*=\s*'(.*?)';/";
